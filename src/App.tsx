@@ -1,21 +1,41 @@
 import { useEffect, useState } from "react";
-import { db, setupPowerSync } from "./schema";
+import { Database, db } from "./schema";
+import TodoForm from "./form";
 
-interface Data {
-  id: number;
-  // 他の必要なプロパティを追加
+type Data = Database["todos"]
+
+const abortController = new AbortController();
+
+async function watchLists(onUpdate: (update: Data[]) => void) {
+  for await (const update of db.watch(
+    'SELECT * from todos',
+    [],
+    { signal: abortController.signal }
+  )
+  ) {
+    onUpdate(update.rows?._array);
+  }
 }
 
+async function setCompleted(id: string, completed: boolean, completed_by: string) {
+  await db.execute(
+    'UPDATE todos SET completed =?, completed_at =?, completed_by =? WHERE id =?',
+    [completed ? 1 : 0, new Date().toISOString(), completed_by, id]
+  );
+}
+
+
 function App() {
-  const [data, setData] = useState<Data | null>(null);
+  const [data, setData] = useState<Data[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setupPowerSync()
-        const result = await db.get('SELECT * FROM lists WHERE id = ?', [1]);
-        setData(result);
+        watchLists(async (update) => {
+          console.log('update:', update);
+          setData(update);
+        });
       } catch (error) {
         setError(error instanceof Error ? error.message : 'Unknown error occurred');
         console.error('Error fetching data:', error);
@@ -25,14 +45,35 @@ function App() {
     fetchData();
   }, []);
 
-  if (error) {
-    return <div>Error: {error}</div>;
-  }
-
   return (
     <>
       <h1>Simple Powersync example</h1>
-      {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
+
+      <h2>Todos</h2>
+      <ul>
+        {data.map((item) => (
+          <li key={item.id}>
+            <div>
+              <div>
+                <input
+                  type="checkbox"
+                  checked={!!item.completed}
+                  onChange={() => setCompleted(
+                    item.id,
+                    !item.completed,
+                    item.created_by!
+                  )}
+                />
+                <label htmlFor={item.id}>{item.description}</label>
+              </div>
+              <span>Created by: {item.created_by}</span>
+              <br />
+            </div>
+          </li>
+        ))}
+      </ul>
+      {error && <div>Error: {error}</div>}
+      <TodoForm />
     </>
   );
 }

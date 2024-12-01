@@ -1,5 +1,6 @@
 import React, { useState, FormEvent } from 'react';
 import { db } from './schema';
+import { dbDrizzle, drizzleSchema } from './drizzle';
 
 interface TodoFormData {
   description: string;
@@ -30,15 +31,20 @@ const TodoForm: React.FC = () => {
       console.log('Submitted:', newTodo);
       // フォームをリセット
       setFormData({ description: '', list_id: '', created_by: '' });
-      db.execute(
-        'INSERT INTO todos (id, description, list_id, created_by) VALUES (?, ?, ?, ?)',
-        [
-          Math.random().toString(36).slice(2),
-          newTodo.description,
-          newTodo.list_id,
-          newTodo.created_by
-        ]
-      );
+      // db.execute(
+      //   'INSERT INTO todos (id, description, list_id, created_by) VALUES (?, ?, ?, ?)',
+      //   [
+      //     Math.random().toString(36).slice(2),
+      //     newTodo.description,
+      //     newTodo.list_id,
+      //     newTodo.created_by
+      //   ]
+      // );
+      const result = await dbDrizzle.insert(drizzleSchema.todos).values({
+        id: Math.random().toString(36).slice(2),
+        description: newTodo.description,
+        list_id: newTodo.list_id,
+      })
 
 
     } catch (error) {

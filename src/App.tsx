@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Database, db } from "./schema";
 import TodoForm from "./form";
+import { dbDrizzle, drizzleSchema } from "./drizzle";
+import { toCompilableQuery } from "@powersync/drizzle-driver";
+import { useQuery } from "@powersync/react";
 
 type Data = Database["todos"]
 
@@ -44,6 +47,12 @@ function App() {
 
     fetchData();
   }, []);
+
+
+
+  const query = dbDrizzle.select().from(drizzleSchema.todos)
+  const { data: fetchData, isLoading } = useQuery(toCompilableQuery(query))
+  console.log({ fetchData })
 
   return (
     <>

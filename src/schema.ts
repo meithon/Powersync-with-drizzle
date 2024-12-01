@@ -21,7 +21,7 @@ const todos = new Table(
   { indexes: { list: ['list_id'] } }
 );
 
-const AppSchema = new Schema({
+export const AppSchema = new Schema({
   todos,
   lists
 });
